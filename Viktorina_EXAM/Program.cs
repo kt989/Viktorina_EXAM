@@ -27,7 +27,7 @@ class Program
         return users;
     }
 
-    static public void GetRegistration()
+    static public User GetRegistration()
     {
         Console.Clear();
         Console.WriteLine("Регистрация:\n\nКак Вас зовут? ");
@@ -74,6 +74,7 @@ class Program
         {
             Console.Clear();
         }
+        return new_user;
     }
     static public bool EnterByLogin(string login)
     {
@@ -135,14 +136,7 @@ class Program
         fs.Close();
         return questions;
     }
-    /*static public void QuestionWriter(List<string> questions, int numer)
-    {
-        for(int  i=0+numer*4; i<4 + numer * 4; i++)
-        {
-            Console.WriteLine(questions[i]);
-        }
-    }*/
-    static public int ValueAnswer(List<string> questions, int numer, ref int marks, int index_questions)
+    static public int ValueAnswer(List<string> questions, int numer, ref int marks, string path_key)
     {
         Console.Clear();
         Console.WriteLine("\nВопрос " + (numer + 1));
@@ -227,20 +221,15 @@ class Program
                 continue;
             }
         }
-        count_marks(marks, numer, index_answer, index_questions);
+        count_marks(ref marks, numer, index_answer, path_key);
         return index_answer;
     }
-    static public int count_marks(int marks, int numer, int index_answer, int index_questions)
+    static public int count_marks(ref int marks, int numer, int index_answer, string path_key)
     {
-        FileStream fs = new FileStream("history answer.txt", FileMode.Open, FileAccess.Read);
+        FileStream fs = new FileStream(path_key, FileMode.Open, FileAccess.Read);
         StreamReader sr = new StreamReader(fs, Encoding.UTF8);
-        List<int> answers = new List<int>();
-        string[] buffer_answer = sr.ReadLine().Split(); 
-        for (int i = 0; !sr.EndOfStream; ++i)
-        {
-            Console.WriteLine("Вопрос " + i + "  Ответ" + buffer_answer[i]);
-        }
-
+        string[] buffer_answer = sr.ReadLine().Split();
+        if (index_answer == Convert.ToInt32(buffer_answer[numer])) { marks++; }
         sr.Close();
         fs.Close();
         
@@ -458,12 +447,13 @@ class Program
 
     }
 
-    public  static void Main(string[] args)
+    public static void Main(string[] args)
     {
         Console.WriteLine("\nУвлекательная викторина!\n\nПриветствуем! Вы у нас впервые? ");
         Console.WriteLine("->Да\n  Нет");
         bool check_answer = true;
         ConsoleKey key = Console.ReadKey().Key;
+        User user_viktorin = new User();
         while (key != ConsoleKey.Enter) //работа меню, пока не нажат Enter, стрелка двигается вверх-вниз
         {
             if ((key == ConsoleKey.UpArrow || key == ConsoleKey.DownArrow) && check_answer == true)
@@ -488,7 +478,7 @@ class Program
 
         if (check_answer) //Регистрация
         {
-            GetRegistration();
+            user_viktorin = GetRegistration();
         }
         else
         {
@@ -531,13 +521,32 @@ class Program
                     user_login = Console.ReadLine();
                     EnterByLogin(user_login); 
                 }
-                else { GetRegistration(); check = true; break; }//Возврат в регистрацию
+                else { user_viktorin = GetRegistration(); check = true; break; }//Возврат в регистрацию
             }
 
             while(!EnterByPassword(user_login)) //Проверка совпадения логина и пароля
             {
                 Console.WriteLine("\nПароль не корректен. Повторите ввод пароля!\n");
             }
+            FileStream fs = new FileStream ("users.txt", FileMode.Open, FileAccess.Read);
+            StreamReader sr = new StreamReader(fs, Encoding.UTF8);
+            string[] buffer_answer;
+            for (int i = 0; !sr.EndOfStream; ++i)
+            {
+                buffer_answer = sr.ReadLine().Split();
+                for (int j = 2; j < buffer_answer.Length; j++)
+                {
+                    if (user_login.Equals(buffer_answer[j]))
+                    {
+                        user_viktorin = new User(buffer_answer[j - 2], StringToDate(buffer_answer[j - 1]), StringToLogin(buffer_answer[j]), StringToPassword(buffer_answer[j + 1]));
+                        break;
+                    }
+                    i += 3;
+                }
+            }
+            sr.Close();
+            fs.Close();
+
         }
         Console.Clear() ;//Выбор темы викторины
         Console.WriteLine("\nНачинаем викторину! Выберете тему: \n");
@@ -628,12 +637,11 @@ class Program
                     int numer = 0;
                     for (int i = 0;i<questions.Count();i++)
                     {
-                        index_answer = ValueAnswer(questions, numer, ref marks, 1);
+                        index_answer = ValueAnswer(questions, numer, ref marks, "history answer.txt");
                         i += 3;
                         numer++;
 
                     }
-                    
                     break;
                 }
             case 2:
@@ -643,7 +651,7 @@ class Program
                     int numer = 0;
                     for (int i = 0; i < questions.Count(); i++)
                     {
-                        index_answer = ValueAnswer(questions, numer, ref marks, 2);
+                        index_answer = ValueAnswer(questions, numer, ref marks, "geography answer.txt");
                         i += 3;
                         numer++;
 
@@ -657,19 +665,21 @@ class Program
                     Random random = new Random();
 
                     int numer = random.Next(0,40);
-                    for (int i = 0; i < questions.Count(); i++)
+                    for (int i = 0; i < questions.Count()/2; i++)
                     {
-                        Console.WriteLine("Random question is " + numer);
-                        Console.ReadLine();
-                        index_answer = ValueAnswer(questions, numer, ref marks, 3);
+                        //Console.WriteLine("Random question is " + numer);
+                        //Console.ReadLine();
+                        index_answer = ValueAnswer(questions, numer, ref marks, "mix answer.txt");
                         i += 3;
                         numer = random.Next(0, 40); 
-
                     }
                     break;
                 }
         }
+        Console.WriteLine("\n\n_____________________________________________________________________\n");
+        user_viktorin.show_user();
 
+        Console.WriteLine($"\n\n{user_viktorin.get_name()}, Ваш результат {marks} правильных ответов из 20");
 
     }
 }
